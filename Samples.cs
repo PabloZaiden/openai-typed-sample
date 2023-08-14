@@ -226,7 +226,7 @@ public class Samples
 
 public class TypedFunctionDefinition<T> : FunctionDefinition
 {
-    public TypedFunctionDefinition(string name, T parametersTemplate) : base(name)
+    public TypedFunctionDefinition(string name) : base(name)
     {
         var schema = JsonSchema.FromType<T>(new JsonSchemaGeneratorSettings()
         {
@@ -246,6 +246,6 @@ public static class TypedFunctionDefinitionFactory
 {
     public static TypedFunctionDefinition<T> Create<T>(string name, T parametersTemplate)
     {
-        return new TypedFunctionDefinition<T>(name, parametersTemplate);
+        return new TypedFunctionDefinition<T>(name);
     }
 }
