@@ -299,9 +299,9 @@ public class Samples
 
     class BoysGirlsAndQuote
     {
-        public string quote { get; set; }
-        public string[] boys { get; set; }
-        public string[] girls { get; set; }
+        required public string quote { get; set; }
+        required public string[] boys { get; set; }
+        required public string[] girls { get; set; }
     }
 }
 
