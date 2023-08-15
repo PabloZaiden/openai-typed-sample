@@ -10,7 +10,7 @@ using NJsonSchema.Generation;
 public class Samples
 {
     const string GeneralSystemPrompt = "You are an assistant.";
-    const string GeneralUserPrompt = "Given the following names, I need to know which are boy names and which are girl names: John, Amy, Bob, Alice, Chris, Sarah, Alex, Mary, Steve, Jane, Brian, Lisa";
+    const string GeneralUserPrompt = "Given the following names, I need to know the quote of the day, and which are boy names and which are girl names: John, Amy, Bob, Alice, Chris, Sarah, Alex, Mary, Steve, Jane, Brian, Lisa";
 
     OpenAIClient _client;
     string _deploymentName;
@@ -60,6 +60,7 @@ public class Samples
             GeneralSystemPrompt + Environment.NewLine + "You must always reply using only a valid json object, without any text before or after",
             GeneralUserPrompt + Environment.NewLine + @"The response must have the following format:
             {
+                ""quote"": ""Sample_Quote"",
                 ""boys"": [""Name1"", ""Name2"", ""Name3""],
                 ""girls"": [""Name4"", ""Name5""]
             }");
@@ -77,16 +78,20 @@ public class Samples
             throw new Exception("Invalid response from OpenAI");
         }
 
-        System.Console.WriteLine();
-        System.Console.WriteLine("Boy names: ");
-        System.Console.WriteLine();
-        json["boys"]!.AsArray().ToList().ForEach(x => System.Console.WriteLine(x!.ToString()));
+        Logger.Info();
+        Logger.Info("Quote of the day: " + json["quote"]!.ToString());
+        Logger.Info();
 
-        System.Console.WriteLine();
-        System.Console.WriteLine();
-        System.Console.WriteLine("Girl names: ");
-        System.Console.WriteLine();
-        json["girls"]!.AsArray().ToList().ForEach(x => System.Console.WriteLine(x!.ToString()));
+        Logger.Info();
+        Logger.Info("Boy names: ");
+        Logger.Info();
+        json["boys"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+
+        Logger.Info();
+        Logger.Info();
+        Logger.Info("Girl names: ");
+        Logger.Info();
+        json["girls"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
     }
 
     public async Task Sample2_AskOpenAIToCallAFunction()
@@ -106,6 +111,10 @@ public class Samples
                     type = "object",
                     properties = new
                     {
+                        quote = new
+                        {
+                            type = "string"
+                        },
                         boys = new
                         {
                             type = "array",
@@ -123,7 +132,7 @@ public class Samples
                             }
                         }
                     },
-                    required = new[] { "boys", "girls" }
+                    required = new[] { "boys", "girls", "quote" }
                 }
             )
         });
@@ -145,13 +154,17 @@ public class Samples
                 throw new Exception("Invalid response from OpenAI");
             }
 
-            System.Console.WriteLine();
-            System.Console.WriteLine("Boy names: ");
-            json["boys"]!.AsArray().ToList().ForEach(x => System.Console.WriteLine(x!.ToString()));
+            Logger.Info();
+            Logger.Info("Quote of the day: " + json["quote"]!.ToString());
+            Logger.Info();
 
-            System.Console.WriteLine();
-            System.Console.WriteLine("Girl names: ");
-            json["girls"]!.AsArray().ToList().ForEach(x => System.Console.WriteLine(x!.ToString()));
+            Logger.Info();
+            Logger.Info("Boy names: ");
+            json["boys"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+
+            Logger.Info();
+            Logger.Info("Girl names: ");
+            json["girls"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
 
         }
         else
@@ -169,11 +182,69 @@ public class Samples
             GeneralSystemPrompt,
             GeneralUserPrompt);
 
-        var functionName = "OutputByBoyOrGirl";
+        var functionName = "OutputByBoyOrGirlWithQuote";
+        var function = new FunctionDefinition(functionName);
+
+        var schema = JsonSchema.FromType<BoysGirlsAndQuote>(new JsonSchemaGeneratorSettings()
+        {
+            DefaultReferenceTypeNullHandling = ReferenceTypeNullHandling.NotNull
+        });
+
+        function.Parameters = BinaryData.FromString(schema.ToJson());
+
+        chat.Functions.Add(function);
+
+        var response = await _client.GetChatCompletionsAsync(_deploymentName, chat);
+
+        var choice = response.Value.Choices[0];
+
+        if (choice.FinishReason == CompletionsFinishReason.FunctionCall &&
+            choice.Message.FunctionCall.Name == functionName)
+        {
+            var functionArguments = choice.Message.FunctionCall.Arguments;
+            Logger.Info($"Response from OpenAI: {functionName}({functionArguments})");
+
+            var typedResponse = JsonSerializer.Deserialize<BoysGirlsAndQuote>(functionArguments)!;
+
+            Logger.Info();
+            Logger.Info("Quote of the day: " + typedResponse.quote);
+            Logger.Info();
+
+            Logger.Info();
+            Logger.Info("Boy names: ");
+            foreach (var name in typedResponse.boys)
+            {
+                Logger.Info(name);
+            }
+
+            Logger.Info();
+            Logger.Info("Girl names: ");
+            foreach (var name in typedResponse.girls)
+            {
+                Logger.Info(name);
+            }
+
+        }
+        else
+        {
+            Logger.Error("Unexpected response from OpenAI: " + choice.Message.Content);
+        }
+    }
+
+    public async Task Sample4_AskOpenAIToCallAnAnonymouslyTypedFunction()
+    {
+        Logger.Header();
+
+        var chat = GenerateChat(
+            GeneralSystemPrompt,
+            GeneralUserPrompt);
+
+        var functionName = "OutputByBoyOrGirlWithQuote";
         var function = TypedFunctionDefinitionFactory.Create(
             functionName,
             new
             {
+                quote = String.Empty,
                 boys = Array.Empty<string>(),
                 girls = Array.Empty<string>()
             });
@@ -192,18 +263,22 @@ public class Samples
 
             var typedResponse = function.ParseResponse(functionArguments);
 
-            System.Console.WriteLine();
-            System.Console.WriteLine("Boy names: ");
+            Logger.Info();
+            Logger.Info("Quote of the day: " + typedResponse.quote);
+            Logger.Info();
+
+            Logger.Info();
+            Logger.Info("Boy names: ");
             foreach (var name in typedResponse.boys)
             {
-                System.Console.WriteLine(name);
+                Logger.Info(name);
             }
 
-            System.Console.WriteLine();
-            System.Console.WriteLine("Girl names: ");
+            Logger.Info();
+            Logger.Info("Girl names: ");
             foreach (var name in typedResponse.girls)
             {
-                System.Console.WriteLine(name);
+                Logger.Info(name);
             }
 
         }
@@ -220,6 +295,13 @@ public class Samples
                 new ChatMessage(ChatRole.System, systemPrompt),
                 new ChatMessage(ChatRole.User, userPrompt)
             });
+    }
+
+    class BoysGirlsAndQuote
+    {
+        public string quote { get; set; }
+        public string[] boys { get; set; }
+        public string[] girls { get; set; }
     }
 }
 

@@ -12,3 +12,5 @@ await samples.Sample1prime_AskOpenAIToFormatAsJsonWithFormat();
 await samples.Sample2_AskOpenAIToCallAFunction();
 
 await samples.Sample3_AskOpenAIToCallATypedFunction();
+
+await samples.Sample4_AskOpenAIToCallAnAnonymouslyTypedFunction();

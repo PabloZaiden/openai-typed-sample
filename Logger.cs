@@ -29,10 +29,10 @@ public static class Logger
         }
     }
 
-    public static void Debug(string message) => Log(message, LogLevel.Debug);
-    public static void Info(string message) => Log(message, LogLevel.Info);
-    public static void Warning(string message) => Log(message, LogLevel.Warning);
-    public static void Error(string message) => Log(message, LogLevel.Error);
+    public static void Debug(string message = "") => Log(message, LogLevel.Debug);
+    public static void Info(string message = "") => Log(message, LogLevel.Info);
+    public static void Warning(string message = "") => Log(message, LogLevel.Warning);
+    public static void Error(string message = "") => Log(message, LogLevel.Error);
 
     public static void Header([CallerMemberName] string methodName = "")
     {
