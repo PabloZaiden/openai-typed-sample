@@ -1,5 +1,6 @@
 namespace OpenAITypedSample;
 
+using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -297,12 +298,7 @@ public class Samples
             });
     }
 
-    class BoysGirlsAndQuote
-    {
-        required public string quote { get; set; }
-        required public string[] boys { get; set; }
-        required public string[] girls { get; set; }
-    }
+    record BoysGirlsAndQuote(string quote, string[] boys, string[] girls);
 }
 
 
