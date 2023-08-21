@@ -11,7 +11,7 @@ using NJsonSchema.Generation;
 public class Samples
 {
     const string GeneralSystemPrompt = "You are an assistant.";
-    const string GeneralUserPrompt = "Given the following names, I need to know the quote of the day, and which are boy names and which are girl names: John, Amy, Bob, Alice, Chris, Sarah, Alex, Mary, Steve, Jane, Brian, Lisa";
+    const string GeneralUserPrompt = "Given the following names, I need to know the quote of the day, which are boy names and which are girl names, and for each group, which is the most popular name: John, Amy, Bob, Alice, Chris, Sarah, Alex, Mary, Steve, Jane, Brian, Lisa";
 
     OpenAIClient _client;
     string _deploymentName;
@@ -62,8 +62,8 @@ public class Samples
             GeneralUserPrompt + Environment.NewLine + @"The response must have the following format:
             {
                 ""quote"": ""Sample_Quote"",
-                ""boys"": [""Name1"", ""Name2"", ""Name3""],
-                ""girls"": [""Name4"", ""Name5""]
+                ""boys"": { ""most_popular"": ""Name2"", ""list"": [""Name1"", ""Name2"", ""Name3""] },
+                ""girls"": { ""most_popular"": ""Name5"", ""list"": [""Name4"", ""Name5""] }
             }");
 
         var response = await _client.GetChatCompletionsAsync(_deploymentName, chat);
@@ -86,13 +86,17 @@ public class Samples
         Logger.Info();
         Logger.Info("Boy names: ");
         Logger.Info();
-        json["boys"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+        json["boys"]!["list"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+        Logger.Info();
+        Logger.Info("Most popular boy name: " + json["boys"]!["most_popular"]!.ToString());
 
         Logger.Info();
         Logger.Info();
         Logger.Info("Girl names: ");
         Logger.Info();
-        json["girls"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+        json["girls"]!["list"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+        Logger.Info();
+        Logger.Info("Most popular girl name: " + json["girls"]!["most_popular"]!.ToString());
     }
 
     public async Task Sample2_AskOpenAIToCallAFunction()
@@ -118,19 +122,43 @@ public class Samples
                         },
                         boys = new
                         {
-                            type = "array",
-                            items = new
+                            type = "object",
+                            properties = new
                             {
-                                type = "string"
-                            }
+                                most_popular = new
+                                {
+                                    type = "string"
+                                },
+                                list = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "string"
+                                    }
+                                }
+                            },
+                            required = new[] { "most_popular", "list" }
                         },
                         girls = new
                         {
-                            type = "array",
-                            items = new
+                            type = "object",
+                            properties = new
                             {
-                                type = "string"
-                            }
+                                most_popular = new
+                                {
+                                    type = "string"
+                                },
+                                list = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "string"
+                                    }
+                                }
+                            },
+                            required = new[] { "most_popular", "list" }
                         }
                     },
                     required = new[] { "boys", "girls", "quote" }
@@ -161,11 +189,18 @@ public class Samples
 
             Logger.Info();
             Logger.Info("Boy names: ");
-            json["boys"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+            Logger.Info();
+            json["boys"]!["list"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+            Logger.Info();
+            Logger.Info("Most popular boy name: " + json["boys"]!["most_popular"]!.ToString());
 
             Logger.Info();
+            Logger.Info();
             Logger.Info("Girl names: ");
-            json["girls"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+            Logger.Info();
+            json["girls"]!["list"]!.AsArray().ToList().ForEach(x => Logger.Info(x!.ToString()));
+            Logger.Info();
+            Logger.Info("Most popular girl name: " + json["girls"]!["most_popular"]!.ToString());
 
         }
         else
@@ -213,17 +248,21 @@ public class Samples
 
             Logger.Info();
             Logger.Info("Boy names: ");
-            foreach (var name in typedResponse.boys)
+            foreach (var name in typedResponse.boys.list)
             {
                 Logger.Info(name);
             }
+            Logger.Info();
+            Logger.Info("Most popular boy name: " + typedResponse.boys.most_popular);
 
             Logger.Info();
             Logger.Info("Girl names: ");
-            foreach (var name in typedResponse.girls)
+            foreach (var name in typedResponse.girls.list)
             {
                 Logger.Info(name);
             }
+            Logger.Info();
+            Logger.Info("Most popular girl name: " + typedResponse.girls.most_popular);
 
         }
         else
@@ -246,8 +285,16 @@ public class Samples
             new
             {
                 quote = String.Empty,
-                boys = Array.Empty<string>(),
-                girls = Array.Empty<string>()
+                boys = new
+                {
+                    most_popular = String.Empty,
+                    list = Array.Empty<string>()
+                },
+                girls = new
+                {
+                    most_popular = String.Empty,
+                    list = Array.Empty<string>()
+                }
             });
 
         chat.Functions.Add(function);
@@ -270,18 +317,22 @@ public class Samples
 
             Logger.Info();
             Logger.Info("Boy names: ");
-            foreach (var name in typedResponse.boys)
+            foreach (var name in typedResponse.boys.list)
+            {
+                Logger.Info(name);
+            }
+            Logger.Info();
+            Logger.Info("Most popular boy name: " + typedResponse.boys.most_popular);
+
+            Logger.Info();
+            Logger.Info("Girl names: ");
+            foreach (var name in typedResponse.girls.list)
             {
                 Logger.Info(name);
             }
 
             Logger.Info();
-            Logger.Info("Girl names: ");
-            foreach (var name in typedResponse.girls)
-            {
-                Logger.Info(name);
-            }
-
+            Logger.Info("Most popular girl name: " + typedResponse.girls.most_popular);
         }
         else
         {
@@ -298,7 +349,8 @@ public class Samples
             });
     }
 
-    record BoysGirlsAndQuote(string quote, string[] boys, string[] girls);
+    record BoysGirlsAndQuote(string quote, People boys, People girls);
+    record People(string most_popular, string[] list);
 }
 
 
